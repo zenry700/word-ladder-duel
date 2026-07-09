@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Ladder Duel</title>
+<style>
+  :root {
+    --bg: #121213;
+    --panel: #1c1c1e;
+    --tile-border: #3a3a3c;
+    --tile-filled: #2c2c2e;
+    --accent: #538d4e;
+    --accent2: #b59f3b;
+    --danger: #a63d40;
+    --text: #e8e8ea;
+    --text-dim: #9a9a9c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 60px;
+  }
+  .app { width: 100%; max-width: 560px; }
+  h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    letter-spacing: 0.05em;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+  .controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .len-btn, .action-btn {
+    background: var(--panel);
+    border: 1px solid var(--tile-border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .len-btn:hover, .action-btn:hover { background: #2a2a2c; }
+  .len-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .action-btn:active, .len-btn:active { transform: scale(0.96); }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .puzzle-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pair {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .pair .arrow { color: var(--text-dim); font-weight: 400; }
+  .start-word { color: var(--accent2); }
+  .target-word { color: #7aa2f7; }
+  .stats { display: flex; gap: 14px; font-size: 0.85rem; color: var(--text-dim); }
+  .stats b { color: var(--text); }
+
+  .chain {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+    min-height: 60px;
+  }
+  .row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    animation: pop 0.25s ease;
+  }
+  @keyframes pop {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .tile {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--tile-border);
+    background: var(--tile-filled);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+  }
+  .tile.changed { border-color: var(--accent); background: #2b3f2a; }
+  .tile.start { border-color: var(--accent2); }
+  .tile.target-tile { border-color: #7aa2f7; }
+  .row.shake { animation: shake 0.35s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  #wordInput {
+    flex: 1;
+    padding: 12px 14px;
+    font-size: 1.1rem;
+    text-transform: lowercase;
+    letter-spacing: 0.1em;
+    background: var(--panel);
+    border: 2px solid var(--tile-border);
+    color: var(--text);
+    border-radius: 6px;
+  }
+  #wordInput:focus { outline: none; border-color: var(--accent); }
+  #submitBtn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 0 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #submitBtn:hover { background: #4a7a45; }
+
+  .message {
+    min-height: 24px;
+    text-align: center;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    color: var(--danger);
+    font-weight: 600;
+  }
+  .message.good { color: var(--accent); }
+
+  .win-panel {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    display: none;
+  }
+  .win-panel.show { display: block; }
+  .win-panel h2 { margin: 0 0 8px; color: var(--accent2); }
+  .win-panel p { margin: 4px 0; color: var(--text-dim); }
+  .win-panel .best { color: var(--accent); font-weight: 700; }
+
+  .bottom-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🪜 Word Ladder Duel</h1>
+  <p class="subtitle">Change one letter at a time. Every step must be a real word.</p>
+
+  <div class="controls">
+    <button class="len-btn" data-len="3">3 letters</button>
+    <button class="len-btn active" data-len="4">4 letters</button>
+    <button class="len-btn" data-len="5">5 letters</button>
+    <button class="action-btn" id="newPuzzleBtn">🔀 New Puzzle</button>
+  </div>
+
+  <div class="puzzle-info">
+    <div class="pair">
+      <span class="start-word" id="startWord">----</span>
+      <span class="arrow">→</span>
+      <span class="target-word" id="targetWord">----</span>
+    </div>
+    <div class="stats">
+      <span>⏱ <b id="timer">0.0s</b></span>
+      <span>Moves: <b id="moveCount">0</b></span>
+      <span>Par: <b id="parCount">-</b></span>
+    </div>
+  </div>
+
+  <div class="chain" id="chain"></div>
+
+  <div class="message" id="message"></div>
+
+  <div class="input-row">
+    <input type="text" id="wordInput" placeholder="type the next word..." autocomplete="off" spellcheck="false">
+    <button id="submitBtn">Add</button>
+  </div>
+
+  <div class="bottom-actions">
+    <button class="action-btn" id="hintBtn">💡 Hint (+20s)</button>
+    <button class="action-btn" id="giveUpBtn">🏳 Reveal Path</button>
+  </div>
+
+  <div class="win-panel" id="winPanel">
+    <h2 id="winTitle">🎉 Solved!</h2>
+    <p id="winStats"></p>
+    <p id="winBest" class="best"></p>
+  </div>
+
+  <footer>Best scores are saved per word length in your browser.</footer>
+</div>
+
+<script src="words.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Graph utilities ----------
+  function differsByOne(a, b) {
+    if (a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) diff++;
+      if (diff > 1) return false;
+    }
+    return diff === 1;
+  }
+
+  function changedIndex(a, b) {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return i;
+    }
+    return -1;
+  }
+
+  function buildGraph(wordList) {
+    const graph = new Map();
+    for (const w of wordList) graph.set(w, []);
+    // bucket by pattern with one wildcard to avoid O(n^2) on larger lists
+    const buckets = new Map();
+    for (const w of wordList) {
+      for (let i = 0; i < w.length; i++) {
+        const key = w.slice(0, i) + "*" + w.slice(i + 1);
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(w);
+      }
+    }
+    for (const group of buckets.values()) {
+      if (group.length < 2) continue;
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          if (group[i] !== group[j]) {
+            graph.get(group[i]).push(group[j]);
+            graph.get(group[j]).push(group[i]);
+          }
+        }
+      }
+    }
+    return graph;
+  }
+
+  function bfsDistances(graph, start) {
+    const dist = new Map([[start, 0]]);
+    const queue = [start];
+    let head = 0;
+    while (head < queue.length) {
+      const cur = queue[head++];
+      const d = dist.get(cur);
+      for (const nb of graph.get(cur) || []) {
+        if (!dist.has(nb)) {
+          dist.set(nb, d + 1);
+          queue.push(nb);
+        }
+      }
+    }
+    return dist;
+  }
+
+  function bfsPath(graph, start, target) {
+    if (start === target) return [start];
+    const prev = new Map([[start, null]]);
+    const queue = [start];
+    let head = 0;
+    while (head < queue.length) {
+      const cur = queue[head++];
+      if (cur === target) break;
+      for (const nb of graph.get(cur) || []) {
+        if (!prev.has(nb)) {
+          prev.set(nb, cur);
+          queue.push(nb);
+        }
+      }
+    }
+    if (!prev.has(target)) return null;
+    const path = [];
+    let cur = target;
+    while (cur !== null) {
+      path.push(cur);
+      cur = prev.get(cur);
+    }
+    return path.reverse();
+  }
+
+  // ---------- Game state ----------
+  let currentLen = 4;
+  let dictSet = new Set();
+  let graph = null;
+  let chain = [];
+  let target = "";
+  let par = 0;
+  let hintsUsed = 0;
+  let timerStart = null;
+  let timerInterval = null;
+  let elapsedFrozen = null;
+  let solved = false;
+  let gaveUp = false;
+
+  const els = {
+    startWord: document.getElementById("startWord"),
+    targetWord: document.getElementById("targetWord"),
+    timer: document.getElementById("timer"),
+    moveCount: document.getElementById("moveCount"),
+    parCount: document.getElementById("parCount"),
+    chain: document.getElementById("chain"),
+    message: document.getElementById("message"),
+    input: document.getElementById("wordInput"),
+    submitBtn: document.getElementById("submitBtn"),
+    hintBtn: document.getElementById("hintBtn"),
+    giveUpBtn: document.getElementById("giveUpBtn"),
+    newPuzzleBtn: document.getElementById("newPuzzleBtn"),
+    winPanel: document.getElementById("winPanel"),
+    winTitle: document.getElementById("winTitle"),
+    winStats: document.getElementById("winStats"),
+    winBest: document.getElementById("winBest"),
+  };
+
+  function setMessage(text, good) {
+    els.message.textContent = text || "";
+    els.message.classList.toggle("good", !!good);
+  }
+
+  function bestKey(len) {
+    return "wordladder-best-" + len;
+  }
+
+  function getBest(len) {
+    try {
+      const raw = localStorage.getItem(bestKey(len));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function maybeSaveBest(len, moves, timeSec) {
+    const best = getBest(len);
+    let isNew = false;
+    if (!best || moves < best.moves || (moves === best.moves && timeSec < best.time)) {
+      localStorage.setItem(bestKey(len), JSON.stringify({ moves, time: timeSec }));
+      isNew = true;
+    }
+    return isNew;
+  }
+
+  function formatTime(sec) {
+    return sec.toFixed(1) + "s";
+  }
+
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
+  function startTimer() {
+    stopTimer();
+    timerStart = Date.now();
+    timerInterval = setInterval(updateTimerDisplay, 100);
+    updateTimerDisplay();
+  }
+
+  function updateTimerDisplay() {
+    const sec = (Date.now() - timerStart) / 1000;
+    els.timer.textContent = formatTime(sec);
+  }
+
+  function currentElapsed() {
+    return (Date.now() - timerStart) / 1000;
+  }
+
+  function renderChain() {
+    els.chain.innerHTML = "";
+    chain.forEach((word, idx) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      const prev = idx > 0 ? chain[idx - 1] : null;
+      const ci = prev ? changedIndex(prev, word) : -1;
+      for (let i = 0; i < word.length; i++) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        if (idx === 0) tile.classList.add("start");
+        if (word === target) tile.classList.add("target-tile");
+        if (i === ci) tile.classList.add("changed");
+        tile.textContent = word[i];
+        row.appendChild(tile);
+      }
+      els.chain.appendChild(row);
+    });
+  }
+
+  function shakeLastRow() {
+    // shake the input area itself since there's no invalid row yet
+    els.input.parentElement.classList.add("shake");
+    setTimeout(() => els.input.parentElement.classList.remove("shake"), 350);
+  }
+
+  function pickPuzzle(len) {
+    const list = WORDS[len];
+    dictSet = new Set(list);
+    graph = buildGraph(list);
+
+    // find start/target pair with a decent path length, retry a bunch
+    const candidates = list.filter((w) => (graph.get(w) || []).length > 0);
+    let best = null;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const start = candidates[Math.floor(Math.random() * candidates.length)];
+      const dist = bfsDistances(graph, start);
+      const options = [...dist.entries()].filter(([w, d]) => d >= 3 && d <= 7);
+      if (options.length > 0) {
+        const [tgt, d] = options[Math.floor(Math.random() * options.length)];
+        best = { start, target: tgt, par: d };
+        if (d >= 3) break;
+      }
+    }
+    if (!best) {
+      // fallback: just connect start to nearest neighbor's neighbor
+      const start = candidates[0];
+      const dist = bfsDistances(graph, start);
+      const options = [...dist.entries()].filter(([w, d]) => d >= 2);
+      const [tgt, d] = options[0] || [start, 0];
+      best = { start, target: tgt, par: d };
+    }
+    return best;
+  }
+
+  function newPuzzle() {
+    stopTimer();
+    solved = false;
+    gaveUp = false;
+    hintsUsed = 0;
+    els.winPanel.classList.remove("show");
+    setMessage("");
+    els.input.disabled = false;
+    els.submitBtn.disabled = false;
+    els.hintBtn.disabled = false;
+    els.giveUpBtn.disabled = false;
+
+    const puzzle = pickPuzzle(currentLen);
+    chain = [puzzle.start];
+    target = puzzle.target;
+    par = puzzle.par;
+
+    els.startWord.textContent = puzzle.start;
+    els.targetWord.textContent = target;
+    els.parCount.textContent = par;
+    els.moveCount.textContent = "0";
+    els.timer.textContent = "0.0s";
+
+    renderChain();
+    els.input.value = "";
+    els.input.focus();
+    startTimer();
+  }
+
+  function submitWord() {
+    if (solved || gaveUp) return;
+    const raw = els.input.value.trim().toLowerCase();
+    els.input.value = "";
+    if (!raw) return;
+
+    const last = chain[chain.length - 1];
+
+    if (raw.length !== currentLen) {
+      setMessage(`Word must be ${currentLen} letters.`);
+      shakeLastRow();
+      return;
+    }
+    if (!dictSet.has(raw)) {
+      setMessage(`"${raw}" isn't in the word list.`);
+      shakeLastRow();
+      return;
+    }
+    if (!differsByOne(last, raw)) {
+      setMessage(`Change exactly one letter from "${last}".`);
+      shakeLastRow();
+      return;
+    }
+    if (chain.includes(raw)) {
+      setMessage(`You've already used "${raw}".`);
+      shakeLastRow();
+      return;
+    }
+
+    chain.push(raw);
+    renderChain();
+    els.moveCount.textContent = String(chain.length - 1);
+    setMessage("Nice!", true);
+
+    if (raw === target) {
+      onWin();
+    }
+  }
+
+  function onWin() {
+    solved = true;
+    stopTimer();
+    const timeSec = currentElapsed();
+    const moves = chain.length - 1;
+    els.input.disabled = true;
+    els.submitBtn.disabled = true;
+    els.hintBtn.disabled = true;
+    els.giveUpBtn.disabled = true;
+
+    const isNewBest = maybeSaveBest(currentLen, moves, timeSec);
+    const best = getBest(currentLen);
+
+    els.winTitle.textContent = moves <= par ? "🏆 Par or better!" : "🎉 Solved!";
+    els.winStats.textContent = `${moves} moves (par ${par}) in ${formatTime(timeSec)}` +
+      (hintsUsed ? ` · ${hintsUsed} hint${hintsUsed > 1 ? "s" : ""} used` : "");
+    els.winBest.textContent = isNewBest
+      ? "★ New best for this length!"
+      : best ? `Best: ${best.moves} moves / ${formatTime(best.time)}` : "";
+    els.winPanel.classList.add("show");
+  }
+
+  function useHint() {
+    if (solved || gaveUp) return;
+    const last = chain[chain.length - 1];
+    const path = bfsPath(graph, last, target);
+    if (!path || path.length < 2) {
+      setMessage("No path found from here — try Reveal Path.");
+      return;
+    }
+    const next = path[1];
+    chain.push(next);
+    hintsUsed++;
+    // time penalty: push timerStart back so displayed/final elapsed increases
+    timerStart -= 20000;
+    renderChain();
+    els.moveCount.textContent = String(chain.length - 1);
+    setMessage(`Hint used: "${next}" (+20s penalty)`);
+    if (next === target) onWin();
+  }
+
+  function giveUp() {
+    if (solved || gaveUp) return;
+    gaveUp = true;
+    stopTimer();
+    const path = bfsPath(graph, chain[chain.length - 1], target);
+    if (path) {
+      chain = chain.concat(path.slice(1));
+      renderChain();
+    }
+    els.moveCount.textContent = String(chain.length - 1);
+    els.input.disabled = true;
+    els.submitBtn.disabled = true;
+    els.hintBtn.disabled = true;
+    els.giveUpBtn.disabled = true;
+    setMessage("Path revealed. Hit New Puzzle to try again!");
+  }
+
+  // ---------- Wiring ----------
+  document.querySelectorAll(".len-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".len-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentLen = parseInt(btn.dataset.len, 10);
+      newPuzzle();
+    });
+  });
+
+  els.newPuzzleBtn.addEventListener("click", newPuzzle);
+  els.submitBtn.addEventListener("click", submitWord);
+  els.hintBtn.addEventListener("click", useHint);
+  els.giveUpBtn.addEventListener("click", giveUp);
+  els.input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitWord();
+  });
+
+  newPuzzle();
+})();
+</script>
+</body>
+</html>
